@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Tracky - Aplicación PWA offline para el seguimiento de hábitos" />
+  <meta name="theme-color" content="#6366f1" id="meta-theme-color" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Tracky" />
+
+  <title>Tracky - Org. de hábitos</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="./manifest.json" />
+
+  <!-- Icono SVG ligero de la PWA -->
+  <link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg" />
+  <link rel="apple-touch-icon" href="./assets/icons/icon.svg" />
+
+  <!-- CDN CSS: Vanilla Calendar Pro (Estilos base del calendario mensual) -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/vanilla-calendar-pro@2.9.10/build/vanilla-calendar.min.css"
+  />
+
+  <!-- Hojas de estilo modulares de Tracky -->
+  <link rel="stylesheet" href="./css/variables.css" />
+  <link rel="stylesheet" href="./css/base.css" />
+  <link rel="stylesheet" href="./css/layout.css" />
+  <link rel="stylesheet" href="./css/components.css" />
+  <link rel="stylesheet" href="./css/calendar.css" />
+
+  <!-- Import Map para facilitar importaciones ES Modules desde CDN -->
+  <script type="importmap">
+    {
+      "imports": {
+        "idb": "https://cdn.jsdelivr.net/npm/idb@8/+esm",
+        "vanilla-calendar-pro": "https://cdn.jsdelivr.net/npm/vanilla-calendar-pro@2.9.10/+esm",
+        "canvas-confetti": "https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/+esm"
+      }
+    }
+  </script>
+
+  <!-- Precarga de módulos externos vía CDN (idb, vanilla-calendar-pro, canvas-confetti) -->
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/idb@8/+esm" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/vanilla-calendar-pro@2.9.10/+esm" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/+esm" />
+</head>
+<body>
+  <!-- Cabecera principal de la aplicación (Navegación, selector de fecha, cambio de tema) -->
+  <header id="app-header" role="banner"></header>
+
+  <!-- Contenedor principal SPA (Lista de hábitos del día, calendario mensual) -->
+  <main id="app-main" role="main"></main>
+
+  <!-- Contenedor global para ventanas modales (Creación de hábitos) -->
+  <div id="modal-container" aria-live="polite"></div>
+
+  <!-- Punto de entrada principal de la aplicación (ES Modules) -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+/* ==========================================================================
+   calendar.css
+   Personalización visual de `vanilla-calendar-pro` para integrarse con las
+   variables CSS de Tracky (Tema Claro y Oscuro) e indicadores de estado diario.
+   ========================================================================== */
+
+.calendar-view-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.calendar-card {
+  width: 100%;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+  touch-action: pan-y; /* Permite scroll vertical y captura limpia de swipe horizontal */
+}
+
+/* --------------------------------------------------------------------------
+   1. Sobrescritura de Estilos de VanillaCalendar Pro (Claro y Oscuro)
+   -------------------------------------------------------------------------- */
+#tracky-calendar.vanilla-calendar,
+.vanilla-calendar {
+  width: 100%;
+  max-width: 100%;
+  background-color: transparent !important;
+  color: var(--text-main) !important;
+  font-family: var(--font-sans) !important;
+  padding: 0.25rem;
+  border: none;
+}
+
+/* Cabecera del mes y flechas de navegación */
+.vanilla-calendar-header {
+  padding-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.vanilla-calendar-header__content {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main) !important;
+  text-transform: capitalize;
+}
+
+.vanilla-calendar-month,
+.vanilla-calendar-year {
+  color: var(--text-main) !important;
+  font-weight: 700 !important;
+}
+
+.vanilla-calendar-month:hover {
+  color: var(--color-accent) !important;
+}
+
+.vanilla-calendar-arrow {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-surface-elevated) !important;
+  color: var(--text-main) !important;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.vanilla-calendar-arrow:hover {
+  background-color: var(--color-accent-soft) !important;
+}
+
+.vanilla-calendar-arrow:before {
+  border-color: var(--text-main) !important;
+}
+
+/* Nombres de los días de la semana (Lun, Mar, Mié...) */
+.vanilla-calendar-week {
+  margin-bottom: 0.35rem;
+}
+
+.vanilla-calendar-week__day {
+  color: var(--text-muted) !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.vanilla-calendar-week__day_weekend {
+  color: var(--text-muted) !important;
+}
+
+/* Cuadrícula de días del mes */
+.vanilla-calendar-days {
+  gap: 0.35rem 0.2rem;
+}
+
+.vanilla-calendar-day {
+  width: 100%;
+  height: auto;
+}
+
+/* Celda botón de cada día: Número arriba + Ícono de estado debajo */
+.vanilla-calendar-day__btn,
+.tracky-calendar-day-btn {
+  width: 100% !important;
+  min-height: 3.4rem !important;
+  padding: 0.4rem 0.15rem !important;
+  border-radius: var(--radius-md) !important;
+  background-color: var(--bg-main) !important;
+  border: 1px solid transparent !important;
+  color: var(--text-main) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.25rem;
+  cursor: pointer !important;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.vanilla-calendar-day__btn:hover {
+  border-color: var(--border-color) !important;
+  background-color: var(--bg-surface-elevated) !important;
+}
+
+/* Resaltado para el día de hoy */
+.vanilla-calendar-day__btn_today {
+  border-color: var(--color-accent) !important;
+  background-color: var(--color-accent-soft) !important;
+}
+
+.vanilla-calendar-day__btn_today .calendar-day-number {
+  color: var(--color-accent) !important;
+  font-weight: 800;
+}
+
+/* Ocultar celdas de meses adyacentes */
+.vanilla-calendar-day__btn_prev,
+.vanilla-calendar-day__btn_next {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Selector desplegable de meses dentro de VanillaCalendar */
+.vanilla-calendar-months__month {
+  background-color: var(--bg-main) !important;
+  color: var(--text-main) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.vanilla-calendar-months__month_selected {
+  background-color: var(--color-accent) !important;
+  color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. Contenido Interno de la Celda (Número del día e Ícono de estado sin fondo)
+   -------------------------------------------------------------------------- */
+.calendar-day-number {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text-main);
+}
+
+.calendar-day-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background-color: transparent;
+}
+
+/* Estado 1: Completado (Check Verde limpio sin burbuja) */
+.calendar-day-status.status-completed {
+  color: var(--color-success);
+}
+
+.calendar-day-status.status-completed svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* Estado 2: Parcial (Punto Amarillo limpio sin burbuja) */
+.calendar-day-status.status-partial {
+  min-height: 1.15rem; /* Mantiene simetría vertical respecto a los SVG de 1.15rem */
+}
+
+.calendar-day-status.status-partial .status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-partial);
+}
+
+/* Estado 3: No completado (Cruz Roja limpia sin burbuja) */
+.calendar-day-status.status-uncompleted {
+  color: var(--color-error);
+}
+
+.calendar-day-status.status-uncompleted svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* Estado 4: Vacío (Sin tareas ese día, conserva la altura de línea de la fila) */
+.calendar-day-status.status-empty {
+  min-height: 1.15rem;
+  background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   3. Leyenda Inferior del Calendario
+   -------------------------------------------------------------------------- */
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.825rem;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
+}

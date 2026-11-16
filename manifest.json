@@ -1,0 +1,19 @@
+{
+  "name": "Tracky",
+  "short_name": "Tracky",
+  "description": "Aplicación PWA para el seguimiento inteligente de hábitos diarios, 100% offline.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "./assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
