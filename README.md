@@ -11,9 +11,9 @@ La aplicación sigue un enfoque *offline-first*: todos los datos se almacenan lo
 ### Vista por Día | Vista por mes
 
 <p>
-  <img src="./assets/images/vista-por-dia.png" alt="Vista por día" width="260" />
+  <img src="./assets/images/vista-por-dia.png" alt="Vista por día" width="180" />
   &nbsp;&nbsp;&nbsp;
-  <img src="./assets/images/vista-por-mes.png" alt="Vista por mes" width="260" />
+  <img src="./assets/images/vista-por-mes.png" alt="Vista por mes" width="180" />
 </p>
 
 ---

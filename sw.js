@@ -4,9 +4,9 @@
  * y Cache-First para librerías CDN, garantizando funcionamiento 100% offline.
  */
 
-const CACHE_NAME = 'tracky-cache-v10';
+const CACHE_NAME = 'tracky-cache-v11';
 
-// Lista de recursos estáticos locales y CDNs externos que se almacenan en caché al instalar
+// Lista de recursos estáticos locales (con rutas relativas para GitHub Pages) y CDNs externos
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -37,7 +37,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Cacheando archivos estáticos de Tracky (v7)...');
+      console.log('[Service Worker] Cacheando archivos estáticos de Tracky (v11)...');
       return cache.addAll(STATIC_ASSETS);
     })
   );
