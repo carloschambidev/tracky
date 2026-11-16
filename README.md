@@ -1,6 +1,6 @@
 # Tracky
 
-Tracky es una aplicación web progresiva (PWA) diseñada para el seguimiento y control de hábitos diarios. Está construida íntegramente con tecnologías web estándar (HTML5, CSS3 modular y JavaScript Vanilla ES6) bajo una arquitectura de página única (SPA), sin depender de frameworks de interfaz de usuario.
+Tracky es una aplicación web progresiva (PWA) diseñada para el seguimiento y control de hábitos diarios.
 
 La aplicación sigue un enfoque *offline-first*: todos los datos se almacenan localmente en el navegador mediante IndexedDB y los recursos estáticos se gestionan a través de un Service Worker, lo que permite utilizarla sin conexión a internet tanto en dispositivos móviles como en escritorio.
 
