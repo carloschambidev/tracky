@@ -4,7 +4,7 @@
  * y Cache-First para librerías CDN, garantizando funcionamiento 100% offline.
  */
 
-const CACHE_NAME = 'tracky-cache-v11';
+const CACHE_NAME = 'tracky-cache-v16';
 
 // Lista de recursos estáticos locales (con rutas relativas para GitHub Pages) y CDNs externos
 const STATIC_ASSETS = [

@@ -1,17 +1,10 @@
 /**
  * js/ui/header.js
- * Renderizado y control de eventos de la barra de navegación superior (`#app-header`)
- * y del Menú Lateral Deslizante (Side Drawer).
+ * Renderizado y control de eventos de la barra de navegación superior (`#app-header`),
+ * botón de "Dividir vista" en escritorio y Menú Lateral Deslizante (Side Drawer).
  *
- * Comportamiento del botón izquierdo:
- * - Si `currentViewDate === getTodayString()` (o en la vista de calendario):
- *   Muestra el ícono de Menú Hamburguesa (3 líneas SVG) que abre/cierra el Side Drawer
- *   deslizante desde la izquierda con las opciones "Día Actual" y "Vista por mes".
- * - Si el usuario está viendo un día pasado o futuro en la vista diaria:
- *   Muestra una flecha de retroceso (<-) que al hacer clic regresa a la vista de calendario.
- *
- * Centro:
- * - Muestra la fecha del día seleccionado con `formatHeaderDate(new Date(currentViewDate + 'T00:00:00'))`.
+ * Estructura visual del Header:
+ * [Menú] [Tracky] ----- [Fecha] ----- [Dividir Vista] [Tema]
  */
 
 import { formatHeaderDate, getTodayString } from '../logic/dateUtils.js';
@@ -31,6 +24,14 @@ const BACK_ARROW_ICON_SVG = `
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="19" y1="12" x2="5" y2="12"></line>
     <polyline points="12 19 5 12 12 5"></polyline>
+  </svg>
+`;
+
+// Ícono SVG para el botón "Dividir vista" (Dos columnas)
+const SPLIT_VIEW_ICON_SVG = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="12" y1="3" x2="12" y2="21"></line>
   </svg>
 `;
 
@@ -75,6 +76,26 @@ const MOON_ICON_SVG = `
 
 // Estado interno del header para saber si el botón izquierdo actúa como menú o como flecha <-
 let isBackArrowMode = false;
+let isSwipeInitialized = false;
+
+/**
+ * Abre el menú lateral (Side Drawer) y su fondo oscuro (Backdrop).
+ */
+export function openSideDrawer() {
+  const drawer = document.getElementById('side-drawer');
+  const backdrop = document.getElementById('drawer-backdrop');
+  const leftBtn = document.getElementById('header-left-btn');
+
+  if (!drawer || !backdrop) return;
+
+  drawer.classList.add('open');
+  backdrop.classList.add('open');
+  drawer.setAttribute('aria-hidden', 'false');
+
+  if (leftBtn && !isBackArrowMode) {
+    leftBtn.setAttribute('aria-expanded', 'true');
+  }
+}
 
 /**
  * Cierra el menú lateral (Side Drawer) y su fondo oscuro (Backdrop).
@@ -101,18 +122,118 @@ export function closeSideDrawer() {
  */
 export function toggleSideDrawer() {
   const drawer = document.getElementById('side-drawer');
-  const backdrop = document.getElementById('drawer-backdrop');
-  const leftBtn = document.getElementById('header-left-btn');
+  if (!drawer) return;
 
-  if (!drawer || !backdrop) return;
-
-  const isOpen = drawer.classList.toggle('open');
-  backdrop.classList.toggle('open', isOpen);
-  drawer.setAttribute('aria-hidden', String(!isOpen));
-
-  if (leftBtn) {
-    leftBtn.setAttribute('aria-expanded', String(isOpen));
+  if (drawer.classList.contains('open')) {
+    closeSideDrawer();
+  } else {
+    openSideDrawer();
   }
+}
+
+/**
+ * Actualiza el estado visual (activo / inactivo) del botón "Dividir vista" en el Header.
+ *
+ * @param {boolean} isActive
+ */
+export function updateSplitViewButton(isActive) {
+  const splitBtn = document.getElementById('header-split-view-btn');
+  if (!splitBtn) return;
+
+  splitBtn.classList.toggle('active', Boolean(isActive));
+  splitBtn.setAttribute('aria-pressed', String(Boolean(isActive)));
+}
+
+/**
+ * Configura el gesto táctil (Swipe) en el documento:
+ * - Si el toque comienza en el borde izquierdo (`clientX < 50`) y se desliza hacia la derecha
+ *   (`deltaX > 60`) de forma mayormente horizontal, abre el Side Drawer.
+ * - Si el Side Drawer está abierto y se desliza hacia la izquierda (`deltaX < -60`), lo cierra.
+ */
+function setupDrawerSwipeGesture() {
+  if (isSwipeInitialized) return;
+  isSwipeInitialized = true;
+
+  const EDGE_THRESHOLD = 50;
+  const MIN_SWIPE_DISTANCE = 60;
+
+  let startX = 0;
+  let startY = 0;
+  let isTrackingSwipe = false;
+  let isVerticalScroll = false;
+
+  document.addEventListener(
+    'touchstart',
+    (event) => {
+      if (!event.touches || event.touches.length !== 1) return;
+
+      const drawer = document.getElementById('side-drawer');
+      const isDrawerOpen = drawer && drawer.classList.contains('open');
+      const touchX = event.touches[0].clientX;
+      const touchY = event.touches[0].clientY;
+
+      if (touchX < EDGE_THRESHOLD || isDrawerOpen) {
+        startX = touchX;
+        startY = touchY;
+        isTrackingSwipe = true;
+        isVerticalScroll = false;
+      } else {
+        isTrackingSwipe = false;
+      }
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    'touchmove',
+    (event) => {
+      if (!isTrackingSwipe || isVerticalScroll || !event.touches || event.touches.length !== 1) {
+        return;
+      }
+
+      const deltaX = event.touches[0].clientX - startX;
+      const deltaY = event.touches[0].clientY - startY;
+
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 12) {
+        isVerticalScroll = true;
+      }
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    'touchend',
+    (event) => {
+      if (!isTrackingSwipe || isVerticalScroll || !event.changedTouches || event.changedTouches.length === 0) {
+        isTrackingSwipe = false;
+        return;
+      }
+
+      const endX = event.changedTouches[0].clientX;
+      const endY = event.changedTouches[0].clientY;
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+
+      isTrackingSwipe = false;
+
+      if (Math.abs(deltaX) <= Math.abs(deltaY) * 1.3) {
+        return;
+      }
+
+      const drawer = document.getElementById('side-drawer');
+      const isDrawerOpen = drawer && drawer.classList.contains('open');
+
+      if (!isDrawerOpen && !isBackArrowMode && startX < EDGE_THRESHOLD && deltaX > MIN_SWIPE_DISTANCE) {
+        openSideDrawer();
+        return;
+      }
+
+      if (isDrawerOpen && deltaX < -MIN_SWIPE_DISTANCE) {
+        closeSideDrawer();
+      }
+    },
+    { passive: true }
+  );
 }
 
 /**
@@ -132,7 +253,6 @@ export function updateHeaderState({ currentView = 'daily', currentViewDate = get
   closeSideDrawer();
 
   const todayStr = getTodayString();
-  // Mostramos la flecha <- cuando el usuario está viendo un día distinto a hoy en la vista diaria
   isBackArrowMode = currentView === 'daily' && currentViewDate !== todayStr;
 
   if (leftBtn) {
@@ -149,13 +269,11 @@ export function updateHeaderState({ currentView = 'daily', currentViewDate = get
     }
   }
 
-  // Actualizamos el título central del Header con la fecha seleccionada
   if (dateDisplay && currentViewDate) {
     const selectedDateObj = new Date(`${currentViewDate}T00:00:00`);
     dateDisplay.textContent = formatHeaderDate(selectedDateObj);
   }
 
-  // Sincronizamos la clase `.active` en las opciones del Side Drawer según la vista actual
   if (todayItemBtn && calendarItemBtn) {
     const isTodayViewActive = currentView === 'daily' && currentViewDate === todayStr;
     const isCalendarViewActive = currentView === 'calendar';
@@ -193,16 +311,20 @@ export function updateHeaderThemeButton(theme) {
  * @param {Object} options
  * @param {'daily' | 'calendar'} [options.currentView='daily']
  * @param {string} [options.currentViewDate=getTodayString()]
+ * @param {boolean} [options.isSplitViewActive=false]
  * @param {Function} options.onSelectToday - Acción al elegir "Día Actual".
  * @param {Function} options.onSelectCalendar - Acción al elegir "Vista por mes".
  * @param {Function} options.onBackToCalendar - Acción al pulsar la flecha <-.
+ * @param {Function} options.onToggleSplitView - Acción al pulsar "Dividir vista".
  */
 export function renderHeader({
   currentView = 'daily',
   currentViewDate = getTodayString(),
+  isSplitViewActive = false,
   onSelectToday,
   onSelectCalendar,
-  onBackToCalendar
+  onBackToCalendar,
+  onToggleSplitView
 } = {}) {
   const headerContainer = document.getElementById('app-header');
   if (!headerContainer) return;
@@ -212,21 +334,40 @@ export function renderHeader({
 
   headerContainer.innerHTML = `
     <div class="header-inner">
-      <button
-        type="button"
-        id="header-left-btn"
-        class="header-icon-btn"
-        aria-haspopup="true"
-        aria-expanded="false"
-      ></button>
+      <!-- Grupo Izquierdo: [Menú] [Tracky] -->
+      <div class="header-left-group">
+        <button
+          type="button"
+          id="header-left-btn"
+          class="header-icon-btn"
+          aria-haspopup="true"
+          aria-expanded="false"
+        ></button>
+        <span class="header-brand-title">Tracky</span>
+      </div>
 
+      <!-- Centro: [Fecha] -->
       <h1 class="header-date-title" id="header-date-display">${formattedDate}</h1>
 
-      <button
-        type="button"
-        id="header-theme-btn"
-        class="header-icon-btn"
-      ></button>
+      <!-- Grupo Derecho: [Dividir Vista] [Tema] -->
+      <div class="header-right-actions">
+        <button
+          type="button"
+          id="header-split-view-btn"
+          class="header-split-btn ${isSplitViewActive ? 'active' : ''}"
+          aria-pressed="${Boolean(isSplitViewActive)}"
+          title="Alternar vista dividida en dos columnas"
+        >
+          ${SPLIT_VIEW_ICON_SVG}
+          <span>Dividir vista</span>
+        </button>
+
+        <button
+          type="button"
+          id="header-theme-btn"
+          class="header-icon-btn"
+        ></button>
+      </div>
     </div>
 
     <!-- Fondo oscuro semitransparente (Backdrop) detrás del Side Drawer -->
@@ -266,9 +407,11 @@ export function renderHeader({
     </aside>
   `;
 
-  // Inicializamos el estado visual de los botones del header y del drawer
   updateHeaderState({ currentView, currentViewDate });
   updateHeaderThemeButton(activeTheme);
+  updateSplitViewButton(isSplitViewActive);
+
+  setupDrawerSwipeGesture();
 
   // Evento del botón izquierdo: Flecha <- o abrir/cerrar Side Drawer
   const leftBtn = document.getElementById('header-left-btn');
@@ -314,6 +457,14 @@ export function renderHeader({
       if (typeof onSelectCalendar === 'function') {
         onSelectCalendar();
       }
+    });
+  }
+
+  // Evento del botón "Dividir vista" (Escritorio)
+  const splitViewBtn = document.getElementById('header-split-view-btn');
+  if (splitViewBtn && typeof onToggleSplitView === 'function') {
+    splitViewBtn.addEventListener('click', () => {
+      onToggleSplitView();
     });
   }
 

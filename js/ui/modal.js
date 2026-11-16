@@ -147,6 +147,7 @@ function openDeleteConfirmModal(taskId, targetDate) {
         await deleteTask(taskId);
         closeModal();
         await renderTaskList(targetDate);
+        window.dispatchEvent(new CustomEvent('tracky:data-changed'));
       } catch (error) {
         console.error('[Tracky Modal] Error al eliminar la tarea:', error);
       }
@@ -306,6 +307,7 @@ export function openModal(taskToEdit = null, targetDate = getTodayString()) {
 
         closeModal();
         await renderTaskList(activeDate);
+        window.dispatchEvent(new CustomEvent('tracky:data-changed'));
       } catch (error) {
         console.error('[Tracky Modal] Error al guardar la tarea:', error);
       }

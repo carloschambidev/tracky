@@ -1,8 +1,9 @@
 /* ==========================================================================
    layout.css
    Estructura de disposición general:
-   - Header fijo superior (#app-header)
-   - Contenedor principal (#app-main)
+   - Header fijo superior (#app-header): [Menú] [Tracky] --- [Fecha] --- [Dividir Vista] [Tema]
+   - Contenedor principal (#app-main) con aprovechamiento completo de altura (min-height),
+     Vista Simple amplia (960px) y Vista Dividida opcional (2 columnas en >= 1024px)
    - Vista Diaria y Botón Flotante (FAB)
    ========================================================================== */
 
@@ -30,15 +31,47 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
 }
 
-.header-date-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+/* Grupo Izquierdo: [Menú] [Tracky] */
+.header-left-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.header-brand-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--text-main);
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Centro: [Fecha] */
+.header-date-title {
+  font-size: 0.925rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-muted);
   text-align: center;
   user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Grupo Derecho: [Dividir Vista] [Tema] */
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .header-icon-btn {
@@ -50,6 +83,7 @@
   justify-content: center;
   color: var(--text-main);
   background-color: transparent;
+  flex-shrink: 0;
   transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
 
@@ -67,12 +101,52 @@
   height: 1.35rem;
 }
 
+/* Botón "Dividir vista" (Oculto en móvil/tablet, visible en escritorio >= 1024px) */
+.header-split-btn {
+  display: none;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.header-split-btn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+}
+
+.header-split-btn:hover {
+  background-color: var(--bg-surface-elevated);
+  border-color: var(--color-accent);
+}
+
+.header-split-btn:active {
+  transform: scale(0.97);
+}
+
+/* Estado Activo ("presionado") cuando la Vista Dividida está activada */
+.header-split-btn.active {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
 /* --------------------------------------------------------------------------
-   2. Contenedor Principal (#app-main)
+   2. Contenedor Principal (#app-main) y Paneles de Vista (.view-pane)
    -------------------------------------------------------------------------- */
 #app-main {
   width: 100%;
   max-width: 640px;
+  min-height: calc(100vh - 3.75rem);
+  min-height: calc(100dvh - 3.75rem);
   margin: 0 auto;
   /* Padding superior compensa los 60px del header fijo + margen visual */
   padding: 5.25rem 1rem 6.5rem;
@@ -81,7 +155,19 @@
   gap: 1.25rem;
 }
 
-/* Cabecera de sección interna (Vista Diaria / Vista Calendario) */
+.view-pane {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.view-pane.pane-hidden {
+  display: none;
+}
+
+/* Cabecera de sección interna (Vista Diaria) */
 .daily-view-header {
   display: flex;
   align-items: baseline;
@@ -146,7 +232,7 @@
   display: none;
 }
 
-/* Ajustes para pantallas de escritorio / tablet */
+/* Ajustes para pantallas de tablet (>= 768px) */
 @media (min-width: 768px) {
   .header-inner {
     padding: 0 1.5rem;
@@ -158,6 +244,45 @@
 
   .fab-button {
     bottom: 2.25rem;
-    right: max(2.25rem, calc(50% - 320px + 1.5rem));
+    right: 2.25rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. Layout en Escritorio (>= 1024px): Vista Simple (por defecto) y Vista Dividida
+   -------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  /* Mostrar botón "Dividir vista" en escritorio */
+  .header-split-btn {
+    display: inline-flex;
+  }
+
+  .header-inner {
+    max-width: 1180px;
+    padding: 0 2rem;
+  }
+
+  /* Vista Simple (por defecto en escritorio): ancho amplio y cómodo de 960px */
+  #app-main {
+    max-width: 960px;
+    padding: 6rem 2rem 6.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Vista Dividida activa (isSplitViewActive === true): Grid de 2 columnas iguales */
+  #app-main.split-view-active {
+    max-width: 1180px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: stretch;
+  }
+
+  /* Cuando la vista dividida está activa, ambos paneles se muestran simultáneamente */
+  #app-main.split-view-active .view-pane,
+  #app-main.split-view-active .view-pane.pane-hidden {
+    display: flex;
   }
 }

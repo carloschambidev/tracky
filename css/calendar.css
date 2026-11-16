@@ -1,18 +1,88 @@
 /* ==========================================================================
    calendar.css
    Personalización visual de `vanilla-calendar-pro` para integrarse con las
-   variables CSS de Tracky (Tema Claro y Oscuro) e indicadores de estado diario.
+   variables CSS de Tracky (Tema Claro y Oscuro), cabecera personalizada del mes,
+   leyenda flotante, columna de Domingo con fondo rojizo y celdas expandidas.
    ========================================================================== */
 
 .calendar-view-section {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.75rem;
   width: 100%;
+  flex: 1;
 }
 
+/* --------------------------------------------------------------------------
+   1. Cabecera Personalizada del Calendario (Mes a la izquierda, Año a la derecha)
+   -------------------------------------------------------------------------- */
+.calendar-custom-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 0.25rem;
+}
+
+.calendar-month-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+.calendar-year-subtitle {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   2. Leyenda Flotante (Debajo del título del mes y arriba de la cuadrícula)
+   -------------------------------------------------------------------------- */
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  padding: 0 0.25rem 0.2rem;
+  background: transparent;
+  border: none;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+}
+
+/* Íconos más compactos dentro de la leyenda */
+.calendar-legend .calendar-day-status.status-completed svg,
+.calendar-legend .calendar-day-status.status-uncompleted svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.calendar-legend .calendar-day-status.status-partial {
+  min-height: 0.9rem;
+}
+
+.calendar-legend .calendar-day-status.status-partial .status-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+}
+
+/* --------------------------------------------------------------------------
+   3. Tarjeta y Sobrescritura de Estilos de VanillaCalendar Pro
+   -------------------------------------------------------------------------- */
 .calendar-card {
   width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -21,13 +91,13 @@
   touch-action: pan-y; /* Permite scroll vertical y captura limpia de swipe horizontal */
 }
 
-/* --------------------------------------------------------------------------
-   1. Sobrescritura de Estilos de VanillaCalendar Pro (Claro y Oscuro)
-   -------------------------------------------------------------------------- */
 #tracky-calendar.vanilla-calendar,
 .vanilla-calendar {
   width: 100%;
   max-width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   background-color: transparent !important;
   color: var(--text-main) !important;
   font-family: var(--font-sans) !important;
@@ -35,33 +105,30 @@
   border: none;
 }
 
-/* Cabecera del mes y flechas de navegación */
+.vanilla-calendar-wrapper,
+.vanilla-calendar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cabecera interna solo para las flechas < y > en Escritorio */
 .vanilla-calendar-header {
-  padding-bottom: 1rem;
-  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.4rem;
   border-bottom: 1px solid var(--border-color);
 }
 
 .vanilla-calendar-header__content {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-main) !important;
-  text-transform: capitalize;
-}
-
-.vanilla-calendar-month,
-.vanilla-calendar-year {
-  color: var(--text-main) !important;
-  font-weight: 700 !important;
-}
-
-.vanilla-calendar-month:hover {
-  color: var(--color-accent) !important;
+  display: none !important;
 }
 
 .vanilla-calendar-arrow {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.1rem;
+  height: 2.1rem;
   border-radius: var(--radius-full);
   background-color: var(--bg-surface-elevated) !important;
   color: var(--text-main) !important;
@@ -76,12 +143,21 @@
   border-color: var(--text-main) !important;
 }
 
-/* Nombres de los días de la semana (Lun, Mar, Mié...) */
-.vanilla-calendar-week {
-  margin-bottom: 0.35rem;
+/* Ocultar flechas < y > en Móvil (se navega con swipe táctil) */
+@media (max-width: 767px) {
+  .vanilla-calendar-header,
+  .vanilla-calendar-arrow {
+    display: none !important;
+  }
 }
 
-.vanilla-calendar-week__day {
+/* Nombres de los días de la semana (LUN a SÁB color normal, DOM en rojo) */
+.vanilla-calendar-week {
+  margin-bottom: 0.45rem;
+}
+
+.vanilla-calendar-week__day,
+.vanilla-calendar-week__day_weekend {
   color: var(--text-muted) !important;
   font-size: 0.8rem;
   font-weight: 600;
@@ -89,26 +165,31 @@
   letter-spacing: 0.03em;
 }
 
-.vanilla-calendar-week__day_weekend {
-  color: var(--text-muted) !important;
+/* Únicamente el día DOM (Domingo, 7ma columna en iso8601) en color rojo */
+.vanilla-calendar-week__day:last-child {
+  color: var(--color-error) !important;
 }
 
-/* Cuadrícula de días del mes */
+/* Cuadrícula de días del mes (se expande verticalmente para aprovechar la tarjeta) */
 .vanilla-calendar-days {
-  gap: 0.35rem 0.2rem;
+  flex: 1;
+  gap: 0.4rem 0.25rem;
+  align-content: stretch;
 }
 
 .vanilla-calendar-day {
   width: 100%;
-  height: auto;
+  height: 100%;
+  display: flex;
 }
 
 /* Celda botón de cada día: Número arriba + Ícono de estado debajo */
 .vanilla-calendar-day__btn,
 .tracky-calendar-day-btn {
   width: 100% !important;
-  min-height: 3.4rem !important;
-  padding: 0.4rem 0.15rem !important;
+  height: 100% !important;
+  min-height: 3.8rem !important; /* Altura cómoda en móvil */
+  padding: 0.45rem 0.15rem !important;
   border-radius: var(--radius-md) !important;
   background-color: var(--bg-main) !important;
   border: 1px solid transparent !important;
@@ -117,14 +198,28 @@
   flex-direction: column !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 0.25rem;
+  gap: 0.3rem;
   cursor: pointer !important;
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+/* Celdas más altas en Escritorio para que el calendario luzca amplio y proporcionado */
+@media (min-width: 1024px) {
+  .vanilla-calendar-day__btn,
+  .tracky-calendar-day-btn {
+    min-height: 4.8rem !important;
+    padding: 0.6rem 0.25rem !important;
+  }
 }
 
 .vanilla-calendar-day__btn:hover {
   border-color: var(--border-color) !important;
   background-color: var(--bg-surface-elevated) !important;
+}
+
+/* Números de los días de la columna del Domingo (7mo elemento de cada fila) en color rojo */
+.vanilla-calendar-days > .vanilla-calendar-day:nth-child(7n) .calendar-day-number {
+  color: var(--color-error) !important;
 }
 
 /* Resaltado para el día de hoy */
@@ -145,20 +240,8 @@
   pointer-events: none !important;
 }
 
-/* Selector desplegable de meses dentro de VanillaCalendar */
-.vanilla-calendar-months__month {
-  background-color: var(--bg-main) !important;
-  color: var(--text-main) !important;
-  border-radius: var(--radius-sm) !important;
-}
-
-.vanilla-calendar-months__month_selected {
-  background-color: var(--color-accent) !important;
-  color: #ffffff !important;
-}
-
 /* --------------------------------------------------------------------------
-   2. Contenido Interno de la Celda (Número del día e Ícono de estado sin fondo)
+   4. Contenido Interno de la Celda (Número del día e Ícono de estado sin fondo)
    -------------------------------------------------------------------------- */
 .calendar-day-number {
   font-size: 0.85rem;
@@ -187,7 +270,7 @@
 
 /* Estado 2: Parcial (Punto Amarillo limpio sin burbuja) */
 .calendar-day-status.status-partial {
-  min-height: 1.15rem; /* Mantiene simetría vertical respecto a los SVG de 1.15rem */
+  min-height: 1.15rem;
 }
 
 .calendar-day-status.status-partial .status-dot {
@@ -211,28 +294,4 @@
 .calendar-day-status.status-empty {
   min-height: 1.15rem;
   background: transparent;
-}
-
-/* --------------------------------------------------------------------------
-   3. Leyenda Inferior del Calendario
-   -------------------------------------------------------------------------- */
-.calendar-legend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-  padding: 0.75rem 1rem;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  font-size: 0.825rem;
-  color: var(--text-muted);
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-weight: 500;
 }

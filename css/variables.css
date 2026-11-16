@@ -1,7 +1,7 @@
 /* ==========================================================================
    variables.css
    Sistema de diseño de Tracky: Paleta de colores (Claro / Oscuro),
-   tipografía, espaciados, bordes y transiciones globales.
+   colores por frecuencia de hábito, tipografía, bordes y transiciones.
    ========================================================================== */
 
 :root {
@@ -28,6 +28,13 @@
 
   --color-error: #ef4444;       /* Error / Día sin completar o acción destructiva (Rojo) */
   --color-error-soft: rgba(239, 68, 68, 0.15);
+
+  /* --- Colorimetría por Frecuencia de Hábito (Tema Claro) --- */
+  --freq-daily: #3b82f6;        /* Azul para Diario */
+  --freq-weekly: #8b5cf6;       /* Violeta para Semanal */
+  --freq-monthly: #f97316;      /* Naranja para Mensual */
+  --freq-yearly: #10b981;       /* Verde para Anual */
+  --freq-none: #d97706;         /* Ámbar/Amarillento para Solo hoy */
 
   /* --- Bordes y Sombras --- */
   --border-color: #e2e8f0;
@@ -74,6 +81,13 @@
 
   --color-error: #f87171;       /* Rojo coral luminoso */
   --color-error-soft: rgba(248, 113, 113, 0.18);
+
+  /* --- Colorimetría por Frecuencia de Hábito (Tema Oscuro) --- */
+  --freq-daily: #60a5fa;        /* Azul luminoso para Diario */
+  --freq-weekly: #a78bfa;       /* Violeta luminoso para Semanal */
+  --freq-monthly: #fb923c;      /* Naranja luminoso para Mensual */
+  --freq-yearly: #34d399;       /* Verde luminoso para Anual */
+  --freq-none: #fbbf24;         /* Ámbar/Amarillo luminoso para Solo hoy */
 
   /* --- Bordes y Sombras --- */
   --border-color: #334155;

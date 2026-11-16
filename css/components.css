@@ -27,6 +27,27 @@
   border-color: var(--color-accent);
 }
 
+/* Colorimetría por Frecuencia (Color aplicado únicamente al subtítulo .task-meta) */
+.task-item.freq-daily .task-meta {
+  color: var(--freq-daily);
+}
+
+.task-item.freq-weekly .task-meta {
+  color: var(--freq-weekly);
+}
+
+.task-item.freq-monthly .task-meta {
+  color: var(--freq-monthly);
+}
+
+.task-item.freq-yearly .task-meta {
+  color: var(--freq-yearly);
+}
+
+.task-item.freq-none .task-meta {
+  color: var(--freq-none);
+}
+
 .task-content {
   display: flex;
   flex-direction: column;
@@ -35,14 +56,14 @@
   flex: 1;
 }
 
-/* Título del hábito (Sin tachado al completarse, solo color atenuado y clickeable para editar) */
+/* Título del hábito (Sin tachado al completarse, solo color atenuado) */
 .task-title {
   font-size: 1rem;
   font-weight: 500;
   color: var(--text-main);
   word-break: break-word;
   text-decoration: none;
-  cursor: pointer;
+  cursor: default;
   align-self: flex-start;
   transition: color 0.2s ease;
 }
@@ -53,16 +74,25 @@
   text-decoration: none; /* Regla de diseño: nunca tachar el texto */
 }
 
-.task-title:hover,
-.task-item.completed .task-title:hover,
-.task-title.completed:hover {
+/* Solo los títulos del día actual (.editable) muestran cursor pointer y efecto hover */
+.task-title.editable {
+  cursor: pointer;
+}
+
+.task-title.editable:hover,
+.task-item.completed .task-title.editable:hover,
+.task-title.completed.editable:hover {
   color: var(--color-accent);
+}
+
+.task-title.readonly {
+  cursor: default;
 }
 
 .task-meta {
   font-size: 0.75rem;
-  color: var(--text-muted);
-  opacity: 0.85;
+  font-weight: 600;
+  color: var(--freq-none);
 }
 
 /* --------------------------------------------------------------------------
