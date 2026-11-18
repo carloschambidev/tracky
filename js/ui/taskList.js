@@ -1,11 +1,6 @@
 /**
  * js/ui/taskList.js
- * Renderizado y gestión de eventos de la Vista Diaria (lista de hábitos por fecha)
- * dentro del contenedor `#daily-view-container` (o `#app-main`).
- *
- * Incluye:
- * - Clases de colorimetría por frecuencia (`freq-daily`, `freq-weekly`, `freq-monthly`, `freq-yearly`, `freq-none`).
- * - Bloqueo de edición y de estado en días pasados o futuros.
+ * Renderizado y gestión de eventos de la Vista Diaria (lista de hábitos por fecha).
  */
 
 import { getAllTasks, getDailyLog, updateTaskStatus } from '../db/db.js';
@@ -14,7 +9,6 @@ import { shouldTaskAppearOnDate } from '../logic/recurrence.js';
 import { triggerCelebration } from './confetti.js';
 import { openModal } from './modal.js';
 
-// Etiquetas legibles en español para el subtítulo de recurrencia de cada tarea
 const RECURRENCE_LABELS = {
   none: 'Solo este día',
   daily: 'Todos los días',
@@ -23,26 +17,12 @@ const RECURRENCE_LABELS = {
   yearly: 'Anual'
 };
 
-/**
- * Escapa caracteres HTML especiales para prevenir inyección XSS al renderizar títulos de usuario.
- *
- * @param {string} text
- * @returns {string}
- */
 function escapeHTML(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-/**
- * Actualiza el contador visual de progreso ("X de Y completados") en la cabecera de la lista
- * y retorna la cantidad de tareas completadas actualmente en el DOM.
- *
- * @param {HTMLElement} mainContainer
- * @param {number} totalTasksCount
- * @returns {number} Cantidad de tareas completadas tras el clic.
- */
 function updateProgressCounter(mainContainer, totalTasksCount) {
   const completedItemsCount = mainContainer.querySelectorAll('.status-circle.completed').length;
 
@@ -55,54 +35,51 @@ function updateProgressCounter(mainContainer, totalTasksCount) {
 }
 
 /**
- * Obtiene las tareas de IndexedDB, filtra las que corresponden a `dateString`,
- * aplica la colorimetría por frecuencia y las reglas de solo lectura para días pasados/futuros.
+ * Renderiza la lista de tareas en el contenedor objetivo (`#mobile-list-panel` o `#app-main`).
  *
  * @param {string} [dateString=getTodayString()] - Fecha objetivo en formato 'YYYY-MM-DD'.
+ * @param {HTMLElement|null} [targetContainer=null] - Contenedor DOM donde inyectar la lista.
  */
-export async function renderTaskList(dateString = getTodayString()) {
+export async function renderTaskList(dateString = getTodayString(), targetContainer = null) {
   const mainContainer =
-    document.getElementById('daily-view-container') ||
+    targetContainer ||
+    document.getElementById('mobile-list-panel') ||
     document.getElementById('app-main');
+
   if (!mainContainer) return;
+
+  const existingFab = document.getElementById('fab-add-task');
 
   const todayStr = getTodayString();
   const isToday = dateString === todayStr;
   const isPast = dateString < todayStr;
   const isFuture = dateString > todayStr;
 
-  // 1. Controlamos la visibilidad del botón FAB (+):
-  //    Oculto en días pasados; visible hoy y en días futuros.
-  const fabButton = document.getElementById('fab-add-task');
-  if (fabButton) {
-    fabButton.classList.toggle('hidden', isPast);
+  if (existingFab) {
+    existingFab.classList.toggle('hidden', isPast);
   }
 
-  // 2. Determinamos el título dinámico de la sección
   const formattedTargetDate = formatHeaderDate(new Date(`${dateString}T00:00:00`));
   const viewTitleText = isToday
     ? 'Hábitos de hoy'
     : `Hábitos del ${formattedTargetDate}`;
 
   try {
-    // 3. Consultamos en paralelo todas las tareas y el registro de la fecha desde IndexedDB
     const [allTasks, dailyLog] = await Promise.all([
       getAllTasks(),
       getDailyLog(dateString)
     ]);
 
-    // 4. Filtramos solo las tareas que deben aparecer en la fecha indicada
     const activeTasks = allTasks.filter((task) =>
       shouldTaskAppearOnDate(task, dateString)
     );
 
     const tasksStatus = dailyLog.tasksStatus || {};
 
-    // 5. Si no hay tareas para esta fecha, mostramos un estado vacío contextualizado
     if (activeTasks.length === 0) {
       const emptyMessage = isPast
         ? 'No hubo hábitos programados para esta fecha.'
-        : 'Pulsa el botón <strong>+</strong> en la esquina inferior derecha para programar un hábito.';
+        : 'Pulsa el botón <strong>+</strong> para programar un hábito.';
 
       mainContainer.innerHTML = `
         <section class="daily-view-header">
@@ -115,10 +92,13 @@ export async function renderTaskList(dateString = getTodayString()) {
           <p class="empty-state-text">${emptyMessage}</p>
         </div>
       `;
+
+      if (existingFab && mainContainer.id === 'mobile-list-panel') {
+        mainContainer.appendChild(existingFab);
+      }
       return;
     }
 
-    // 6. Construimos el HTML de la lista de tareas activas con clase de color por frecuencia (`freq-*`)
     const completedCount = activeTasks.filter((t) => tasksStatus[t.id] === true).length;
     const disabledCircleClass = !isToday ? 'disabled' : '';
     const editableTitleClass = isToday ? 'editable' : 'readonly';
@@ -131,7 +111,6 @@ export async function renderTaskList(dateString = getTodayString()) {
         const recurrenceLabel = RECURRENCE_LABELS[recurrenceKey];
         const freqClass = `freq-${recurrenceKey}`;
 
-        // Solo incluimos atributos de edición en el título cuando `isToday === true`
         const titleAttributes = isToday
           ? `data-task-id="${escapeHTML(task.id)}" title="Haz clic para editar o eliminar este hábito"`
           : '';
@@ -173,17 +152,17 @@ export async function renderTaskList(dateString = getTodayString()) {
       </ul>
     `;
 
-    // 7. Si NO es hoy (es un día pasado o futuro), los hábitos existentes son estrictamente
-    //    de solo lectura: no registramos listeners de edición ni de cambio de estado.
+    if (existingFab && mainContainer.id === 'mobile-list-panel') {
+      mainContainer.appendChild(existingFab);
+    }
+
     if (!isToday || isPast || isFuture) {
       return;
     }
 
-    // 8. Solo para HOY (`isToday === true`): Delegación de eventos para editar título o marcar círculo
     const taskListEl = mainContainer.querySelector('#daily-task-list');
     if (taskListEl) {
       taskListEl.addEventListener('click', async (event) => {
-        // Caso A: Clic sobre el título editable -> Abrir modal de edición
         const titleEl = event.target.closest('.task-title.editable');
         if (titleEl) {
           const taskId = titleEl.dataset.taskId;
@@ -194,7 +173,6 @@ export async function renderTaskList(dateString = getTodayString()) {
           return;
         }
 
-        // Caso B: Clic sobre el círculo de estado -> Completar / Desmarcar hábito
         const circleBtn = event.target.closest('.status-circle');
         if (!circleBtn || circleBtn.classList.contains('disabled')) return;
 

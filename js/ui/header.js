@@ -1,7 +1,8 @@
 /**
  * js/ui/header.js
  * Renderizado y control de eventos de la barra de navegación superior (`#app-header`),
- * botón de "Dividir vista" en escritorio y Menú Lateral Deslizante (Side Drawer).
+ * botón de "Dividir vista" (visible en Escritorio con texto y en Móvil solo con ícono)
+ * y Menú Lateral Deslizante (Side Drawer).
  *
  * Estructura visual del Header:
  * [Menú] [Tracky] ----- [Fecha] ----- [Dividir Vista] [Tema]
@@ -355,11 +356,12 @@ export function renderHeader({
           type="button"
           id="header-split-view-btn"
           class="header-split-btn ${isSplitViewActive ? 'active' : ''}"
+          aria-label="Dividir vista"
           aria-pressed="${Boolean(isSplitViewActive)}"
-          title="Alternar vista dividida en dos columnas"
+          title="Dividir vista"
         >
           ${SPLIT_VIEW_ICON_SVG}
-          <span>Dividir vista</span>
+          <span class="split-btn-label">Dividir vista</span>
         </button>
 
         <button
@@ -411,8 +413,6 @@ export function renderHeader({
   updateHeaderThemeButton(activeTheme);
   updateSplitViewButton(isSplitViewActive);
 
-  setupDrawerSwipeGesture();
-
   // Evento del botón izquierdo: Flecha <- o abrir/cerrar Side Drawer
   const leftBtn = document.getElementById('header-left-btn');
   if (leftBtn) {
@@ -460,7 +460,7 @@ export function renderHeader({
     });
   }
 
-  // Evento del botón "Dividir vista" (Escritorio)
+  // Evento del botón "Dividir vista" (Móvil y Escritorio)
   const splitViewBtn = document.getElementById('header-split-view-btn');
   if (splitViewBtn && typeof onToggleSplitView === 'function') {
     splitViewBtn.addEventListener('click', () => {

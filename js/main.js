@@ -1,72 +1,52 @@
 /**
  * js/main.js
  * Punto de entrada principal de Tracky (SPA).
- * Gestiona el estado global de la fecha seleccionada (`currentViewDate`),
- * el modo de Vista Dividida opcional en Escritorio (`isSplitViewActive`),
- * el enrutamiento entre vistas ('daily' y 'calendar'), el Header y el botón flotante (FAB).
+ *
+ * Lógica táctil global dividida por mitades de pantalla:
+ * - Mitad Superior (startY < window.innerHeight / 2):
+ *   * Swipe de izquierda a derecha -> Abre el menú lateral (openSideDrawer).
+ *   * Swipe de derecha a izquierda -> Si el menú está abierto, lo cierra (closeSideDrawer).
+ * - Mitad Inferior (startY >= window.innerHeight / 2):
+ *   * Si el calendario está en pantalla (Vista Dividida o Vista de Calendario sola):
+ *     - Swipe de izquierda a derecha -> Retrocede un mes (changeCalendarMonth(-1)).
+ *     - Swipe de derecha a izquierda -> Avanza un mes (changeCalendarMonth(1)).
  */
 
 import { initDB } from './db/db.js';
 import { getTodayString } from './logic/dateUtils.js';
 import { initTheme } from './ui/theme.js';
-import { renderHeader, updateHeaderState, updateSplitViewButton } from './ui/header.js';
+import {
+  renderHeader,
+  updateHeaderState,
+  updateSplitViewButton,
+  openSideDrawer,
+  closeSideDrawer
+} from './ui/header.js';
 import { renderTaskList } from './ui/taskList.js';
-import { renderCalendarView } from './ui/calendarView.js';
+import { renderCalendarView, changeCalendarMonth } from './ui/calendarView.js';
 import { openModal } from './ui/modal.js';
 
-// Estado global de la vista activa ('daily' | 'calendar')
 let currentView = 'daily';
-
-// Estado global de la fecha seleccionada en formato 'YYYY-MM-DD'
 let currentViewDate = getTodayString();
 
-// Estado global de la Vista Dividida en Escritorio (por defecto false: Vista Simple amplia)
 let isSplitViewActive = false;
+let isMobileSplitView = false;
+let globalSwipeInitialized = false;
 
-// Media query para detectar pantalla de Escritorio (>= 1024px)
 const desktopMediaQuery = window.matchMedia('(min-width: 1024px)');
+const landscapeMediaQuery = window.matchMedia('(max-width: 1023px) and (orientation: landscape)');
 
-/**
- * Indica si la Vista Dividida está activa y la pantalla es de escritorio (>= 1024px).
- *
- * @returns {boolean}
- */
 export function isSplitViewEnabled() {
-  return isSplitViewActive && desktopMediaQuery.matches;
+  if (desktopMediaQuery.matches) {
+    return isSplitViewActive;
+  }
+  return isMobileSplitView;
 }
 
-/**
- * Retorna la fecha actualmente seleccionada en la aplicación ('YYYY-MM-DD').
- *
- * @returns {string}
- */
 export function getViewDate() {
   return currentViewDate;
 }
 
-/**
- * Asegura que dentro de `#app-main` existan los dos contenedores de panel
- * (`#daily-view-container` para la lista y `#calendar-view-container` para el calendario).
- */
-function ensureSplitViewContainers() {
-  const mainContainer = document.getElementById('app-main');
-  if (!mainContainer) return;
-
-  if (!document.getElementById('daily-view-container') || !document.getElementById('calendar-view-container')) {
-    mainContainer.innerHTML = `
-      <div id="daily-view-container" class="view-pane daily-pane"></div>
-      <div id="calendar-view-container" class="view-pane calendar-pane"></div>
-    `;
-  }
-}
-
-/**
- * Actualiza la fecha seleccionada (`currentViewDate`) y sincroniza el Header:
- * - Si `dateString` es igual a hoy (`getTodayString()`), muestra el menú hamburguesa.
- * - Si es un día pasado o futuro, muestra la flecha (<-).
- *
- * @param {string} dateString - Fecha en formato 'YYYY-MM-DD'.
- */
 export function setViewDate(dateString) {
   currentViewDate = dateString || getTodayString();
   updateHeaderState({
@@ -75,82 +55,7 @@ export function setViewDate(dateString) {
   });
 }
 
-/**
- * Alterna el modo de Vista Dividida (`isSplitViewActive`) en Escritorio,
- * actualiza la clase `.split-view-active` en `#app-main` y el estado del botón en el Header.
- */
-export async function toggleSplitView() {
-  isSplitViewActive = !isSplitViewActive;
-
-  const mainContainer = document.getElementById('app-main');
-  if (mainContainer) {
-    mainContainer.classList.toggle('split-view-active', isSplitViewEnabled());
-  }
-
-  updateSplitViewButton(isSplitViewActive);
-  await switchView(currentView);
-}
-
-/**
- * Renderiza la interfaz según la vista seleccionada y si la Vista Dividida está activa:
- * - Si `isSplitViewEnabled() === true`: Muestra ambas columnas simultáneamente
- *   (Lista Diaria a la izquierda y Calendario Mensual a la derecha).
- * - Si `isSplitViewEnabled() === false`: Muestra únicamente la vista activa (`'daily'` o `'calendar'`).
- *
- * @param {'daily' | 'calendar'} viewName
- */
-export async function switchView(viewName) {
-  currentView = viewName === 'calendar' ? 'calendar' : 'daily';
-
-  ensureSplitViewContainers();
-
-  const mainContainer = document.getElementById('app-main');
-  const dailyPane = document.getElementById('daily-view-container');
-  const calendarPane = document.getElementById('calendar-view-container');
-  const fabButton = document.getElementById('fab-add-task');
-
-  if (mainContainer) {
-    mainContainer.classList.toggle('split-view-active', isSplitViewEnabled());
-  }
-
-  // Sincronizamos el Header (ícono hamburguesa vs flecha <- y título de fecha)
-  updateHeaderState({
-    currentView,
-    currentViewDate
-  });
-
-  if (isSplitViewEnabled()) {
-    // Vista Dividida en Escritorio: Ambos paneles visibles al mismo tiempo
-    if (dailyPane) dailyPane.classList.remove('pane-hidden');
-    if (calendarPane) calendarPane.classList.remove('pane-hidden');
-
-    await Promise.all([
-      renderTaskList(currentViewDate),
-      renderCalendarView({ preserveHeaderDate: true })
-    ]);
-    return;
-  }
-
-  // Vista Simple (por defecto en escritorio y siempre en móvil): Alterna una sola vista
-  if (currentView === 'calendar') {
-    if (dailyPane) dailyPane.classList.add('pane-hidden');
-    if (calendarPane) calendarPane.classList.remove('pane-hidden');
-    if (fabButton) fabButton.classList.add('hidden');
-
-    await renderCalendarView({ preserveHeaderDate: false });
-  } else {
-    if (calendarPane) calendarPane.classList.add('pane-hidden');
-    if (dailyPane) dailyPane.classList.remove('pane-hidden');
-
-    await renderTaskList(currentViewDate);
-  }
-}
-
-/**
- * Crea e inyecta el botón flotante (+) para agregar nuevos hábitos
- * y configura su listener para abrir el modal en la fecha activa (`currentViewDate`).
- */
-function setupFloatingActionButton() {
+function getOrCreateFabButton() {
   let fabButton = document.getElementById('fab-add-task');
 
   if (!fabButton) {
@@ -161,18 +66,219 @@ function setupFloatingActionButton() {
     fabButton.setAttribute('aria-label', 'Crear nuevo hábito');
     fabButton.setAttribute('title', 'Nuevo hábito');
     fabButton.textContent = '+';
-    document.body.appendChild(fabButton);
+    fabButton.addEventListener('click', () => {
+      openModal(null, currentViewDate);
+    });
   }
 
-  fabButton.addEventListener('click', () => {
-    openModal(null, currentViewDate);
-  });
+  return fabButton;
 }
 
 /**
- * Registra el Service Worker (`sw.js`) si el navegador lo soporta,
- * permitiendo que la PWA funcione 100% offline.
+ * Procesa el gesto de swipe dividiendo la pantalla en Mitad Superior y Mitad Inferior.
+ *
+ * @param {number} startX
+ * @param {number} startY
+ * @param {number} endX
+ * @param {number} endY
  */
+function handleScreenHalfSwipe(startX, startY, endX, endY) {
+  const deltaX = endX - startX;
+  const deltaY = endY - startY;
+  const SWIPE_MIN_DISTANCE = 45;
+
+  // Verificamos que el deslizamiento sea predominantemente horizontal
+  if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE || Math.abs(deltaX) <= Math.abs(deltaY)) {
+    return;
+  }
+
+  const halfScreenY = window.innerHeight / 2;
+  const drawer = document.getElementById('side-drawer');
+  const isDrawerOpen = Boolean(drawer && drawer.classList.contains('open'));
+
+  // ZONA 1: De la mitad de la pantalla para arriba (startY < mitad) -> Menú Toggle
+  if (startY < halfScreenY) {
+    if (deltaX > 0 && !isDrawerOpen) {
+      // Deslizar de izquierda a derecha -> Abre el menú
+      openSideDrawer();
+    } else if (deltaX < 0 && isDrawerOpen) {
+      // Deslizar de derecha a izquierda con el menú abierto -> Cierra el menú
+      closeSideDrawer();
+    }
+    return;
+  }
+
+  // ZONA 2: De la mitad de la pantalla para abajo (startY >= mitad) -> Calendario
+  // Si el menú está abierto y desliza a la izquierda en cualquier parte, también permite cerrarlo
+  if (isDrawerOpen) {
+    if (deltaX < 0) {
+      closeSideDrawer();
+    }
+    return;
+  }
+
+  const isCalendarOnScreen = isSplitViewEnabled() || currentView === 'calendar';
+  if (isCalendarOnScreen) {
+    if (deltaX > 0) {
+      // Deslizar de izquierda a derecha -> Retrocede un mes
+      changeCalendarMonth(-1);
+    } else if (deltaX < 0) {
+      // Deslizar de derecha a izquierda -> Avanza un mes
+      changeCalendarMonth(1);
+    }
+  }
+}
+
+/**
+ * Inicializa un único listener global en `window` para capturar gestos táctiles
+ * (`touchstart`/`touchmove`/`touchend`) en celulares reales y arrastre con mouse
+ * (`pointerdown`/`pointerup`) en simuladores de escritorio.
+ */
+export function setupSwipeGestures() {
+  if (globalSwipeInitialized) return;
+  globalSwipeInitialized = true;
+
+  let startX = 0;
+  let startY = 0;
+  let lastX = 0;
+  let lastY = 0;
+  let isTouching = false;
+  let isMouseDown = false;
+
+  // 1. Eventos Touch nativos para iOS / Android (nunca se pierden al re-renderizar el DOM)
+  window.addEventListener(
+    'touchstart',
+    (e) => {
+      if (!e.touches || e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      lastX = startX;
+      lastY = startY;
+      isTouching = true;
+    },
+    { passive: true }
+  );
+
+  window.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!isTouching || !e.touches || e.touches.length !== 1) return;
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
+
+  window.addEventListener(
+    'touchend',
+    (e) => {
+      if (!isTouching) return;
+      isTouching = false;
+
+      const endX =
+        e.changedTouches && e.changedTouches.length > 0
+          ? e.changedTouches[0].clientX
+          : lastX;
+      const endY =
+        e.changedTouches && e.changedTouches.length > 0
+          ? e.changedTouches[0].clientY
+          : lastY;
+
+      handleScreenHalfSwipe(startX, startY, endX, endY);
+    },
+    { passive: true }
+  );
+
+  // 2. Respaldo con Mouse para poder probar el swipe arrastrando con el cursor en PC/Simulador
+  window.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    startX = e.clientX;
+    startY = e.clientY;
+    isMouseDown = true;
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    if (e.pointerType !== 'mouse' || !isMouseDown) return;
+    isMouseDown = false;
+    handleScreenHalfSwipe(startX, startY, e.clientX, e.clientY);
+  });
+}
+
+function syncSplitLayoutClasses() {
+  const mainContainer = document.getElementById('app-main');
+  if (!mainContainer) return;
+
+  const isDesktop = desktopMediaQuery.matches;
+  const isMobileLandscape = landscapeMediaQuery.matches;
+
+  const applyDesktopColumns = (isDesktop && isSplitViewActive) || (isMobileLandscape && isMobileSplitView);
+  const applyMobileVerticalSplit = !isDesktop && !isMobileLandscape && isMobileSplitView;
+
+  mainContainer.classList.toggle('split-view-active', applyDesktopColumns);
+  mainContainer.classList.toggle('mobile-split-active', applyMobileVerticalSplit);
+
+  updateSplitViewButton(isSplitViewEnabled());
+}
+
+export async function toggleSplitView() {
+  if (desktopMediaQuery.matches) {
+    isSplitViewActive = !isSplitViewActive;
+    isMobileSplitView = isSplitViewActive;
+  } else {
+    isMobileSplitView = !isMobileSplitView;
+    isSplitViewActive = isMobileSplitView;
+  }
+
+  await switchView(currentView);
+}
+
+export async function switchView(viewName) {
+  currentView = viewName === 'calendar' ? 'calendar' : 'daily';
+
+  const mainContainer = document.getElementById('app-main');
+  if (!mainContainer) return;
+
+  const fabButton = getOrCreateFabButton();
+  syncSplitLayoutClasses();
+
+  updateHeaderState({
+    currentView,
+    currentViewDate
+  });
+
+  if (isSplitViewEnabled()) {
+    mainContainer.innerHTML = `
+      <div id="mobile-list-panel" style="flex: 45; overflow-y: auto; position: relative; padding: 1rem;"></div>
+      <div id="mobile-calendar-panel" style="flex: 55; overflow: hidden; padding: 0.5rem; border-top: 1px solid var(--border-color);"></div>
+    `;
+
+    const listPanel = document.getElementById('mobile-list-panel');
+    const calendarPanel = document.getElementById('mobile-calendar-panel');
+
+    await Promise.all([
+      renderTaskList(currentViewDate, listPanel),
+      renderCalendarView({ preserveHeaderDate: true, targetContainer: calendarPanel })
+    ]);
+
+    if (listPanel && fabButton.parentElement !== listPanel) {
+      listPanel.appendChild(fabButton);
+    }
+    return;
+  }
+
+  // Modo Dividido INACTIVO (Vista simple)
+  if (fabButton.parentElement !== document.body) {
+    document.body.appendChild(fabButton);
+  }
+
+  if (currentView === 'calendar') {
+    fabButton.classList.add('hidden');
+    await renderCalendarView({ preserveHeaderDate: false, targetContainer: mainContainer });
+  } else {
+    await renderTaskList(currentViewDate, mainContainer);
+  }
+}
+
 async function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     try {
@@ -184,22 +290,17 @@ async function registerServiceWorker() {
   }
 }
 
-/**
- * Función principal de arranque de la aplicación.
- */
 async function initApp() {
   try {
-    // 1. Inicializa el tema visual (localStorage o prefers-color-scheme)
     initTheme();
-
-    // 2. Inicializa la conexión y estructura de IndexedDB
     await initDB();
 
-    // 3. Renderiza el Header fijo con soporte para Menú Lateral, Flecha <- y botón "Dividir vista"
+    getOrCreateFabButton();
+
     renderHeader({
       currentView,
       currentViewDate,
-      isSplitViewActive,
+      isSplitViewActive: isSplitViewEnabled(),
       onSelectToday: () => {
         setViewDate(getTodayString());
         switchView('daily');
@@ -209,9 +310,11 @@ async function initApp() {
       },
       onBackToCalendar: () => {
         if (isSplitViewEnabled()) {
-          // En Vista Dividida el calendario ya está a la derecha; la flecha regresa al Día Actual
           setViewDate(getTodayString());
-          renderTaskList(getTodayString());
+          const listPanel = document.getElementById('mobile-list-panel');
+          renderTaskList(getTodayString(), listPanel);
+          const calendarPanel = document.getElementById('mobile-calendar-panel');
+          renderCalendarView({ preserveHeaderDate: true, targetContainer: calendarPanel });
         } else {
           switchView('calendar');
         }
@@ -221,26 +324,23 @@ async function initApp() {
       }
     });
 
-    // 4. Configura el botón flotante (+) para abrir el modal de creación
-    setupFloatingActionButton();
-
-    // 5. Renderiza la vista inicial ('daily' en Vista Simple por defecto)
     await switchView('daily');
 
-    // 6. Escucha cambios de tamaño de ventana (Móvil <-> Escritorio)
     desktopMediaQuery.addEventListener('change', () => {
       switchView(currentView);
     });
+    landscapeMediaQuery.addEventListener('change', () => {
+      switchView(currentView);
+    });
 
-    // 7. Cuando la Vista Dividida está activa y cambian tareas o estados en la columna izquierda,
-    //    refrescamos automáticamente el calendario en la columna derecha.
     window.addEventListener('tracky:data-changed', () => {
       if (isSplitViewEnabled()) {
-        renderCalendarView({ preserveHeaderDate: true });
+        const calendarPanel = document.getElementById('mobile-calendar-panel');
+        renderCalendarView({ preserveHeaderDate: true, targetContainer: calendarPanel });
       }
     });
 
-    // 8. Registra el Service Worker para soporte offline
+    setupSwipeGestures();
     await registerServiceWorker();
 
     console.log('Tracky App Iniciada');
@@ -249,5 +349,4 @@ async function initApp() {
   }
 }
 
-// Ejecuta initApp cuando el árbol DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', initApp);

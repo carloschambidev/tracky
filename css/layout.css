@@ -1,10 +1,7 @@
 /* ==========================================================================
    layout.css
-   Estructura de disposición general:
-   - Header fijo superior (#app-header): [Menú] [Tracky] --- [Fecha] --- [Dividir Vista] [Tema]
-   - Contenedor principal (#app-main) con aprovechamiento completo de altura (min-height),
-     Vista Simple amplia (960px) y Vista Dividida opcional (2 columnas en >= 1024px)
-   - Vista Diaria y Botón Flotante (FAB)
+   Estructura de disposición general con Flexbox limpio para Vista Dividida Móvil
+   (#mobile-list-panel y #mobile-calendar-panel) y Grid de 2 columnas en Escritorio.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -15,7 +12,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3.75rem; /* 60px */
+  height: 60px;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
@@ -34,7 +31,6 @@
   gap: 0.5rem;
 }
 
-/* Grupo Izquierdo: [Menú] [Tracky] */
 .header-left-group {
   display: flex;
   align-items: center;
@@ -52,7 +48,6 @@
   white-space: nowrap;
 }
 
-/* Centro: [Fecha] */
 .header-date-title {
   font-size: 0.925rem;
   font-weight: 600;
@@ -64,12 +59,11 @@
   flex-shrink: 0;
 }
 
-/* Grupo Derecho: [Dividir Vista] [Tema] */
 .header-right-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 0.45rem;
   flex: 1;
   min-width: 0;
 }
@@ -101,12 +95,15 @@
   height: 1.35rem;
 }
 
-/* Botón "Dividir vista" (Oculto en móvil/tablet, visible en escritorio >= 1024px) */
+/* Botón "Dividir vista" */
 .header-split-btn {
-  display: none;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
-  padding: 0.45rem 0.85rem;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background-color: var(--bg-main);
@@ -114,12 +111,17 @@
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
+.header-split-btn .split-btn-label {
+  display: none;
+}
+
 .header-split-btn svg {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 1.15rem;
+  height: 1.15rem;
   flex-shrink: 0;
 }
 
@@ -129,10 +131,9 @@
 }
 
 .header-split-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
-/* Estado Activo ("presionado") cuando la Vista Dividida está activada */
 .header-split-btn.active {
   border-color: var(--color-accent);
   background-color: var(--color-accent-soft);
@@ -140,34 +141,27 @@
 }
 
 /* --------------------------------------------------------------------------
-   2. Contenedor Principal (#app-main) y Paneles de Vista (.view-pane)
+   2. Contenedor Principal (#app-main) en modo normal
    -------------------------------------------------------------------------- */
 #app-main {
   width: 100%;
   max-width: 640px;
-  min-height: calc(100vh - 3.75rem);
-  min-height: calc(100dvh - 3.75rem);
+  min-height: calc(100dvh - 60px);
   margin: 0 auto;
-  /* Padding superior compensa los 60px del header fijo + margen visual */
   padding: 5.25rem 1rem 6.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  touch-action: pan-y !important;
+  overscroll-behavior: contain !important;
 }
 
-.view-pane {
-  width: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+#mobile-list-panel,
+#mobile-calendar-panel {
+  touch-action: pan-y !important;
+  overscroll-behavior: contain !important;
 }
 
-.view-pane.pane-hidden {
-  display: none;
-}
-
-/* Cabecera de sección interna (Vista Diaria) */
 .daily-view-header {
   display: flex;
   align-items: baseline;
@@ -188,7 +182,6 @@
   color: var(--text-muted);
 }
 
-/* Contenedor de la lista de hábitos */
 .task-list {
   display: flex;
   flex-direction: column;
@@ -197,7 +190,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   3. Botón Flotante de Acción (FAB) en la esquina inferior derecha
+   3. Botón Flotante de Acción (FAB) en modo normal
    -------------------------------------------------------------------------- */
 .fab-button {
   position: fixed;
@@ -229,32 +222,83 @@
 }
 
 .fab-button.hidden {
-  display: none;
+  display: none !important;
 }
 
-/* Ajustes para pantallas de tablet (>= 768px) */
-@media (min-width: 768px) {
-  .header-inner {
-    padding: 0 1.5rem;
+/* --------------------------------------------------------------------------
+   4. CSS Estricto con Flexbox para Vista Dividida en Móvil (@media (max-width: 1023px))
+   -------------------------------------------------------------------------- */
+@media (max-width: 1023px) {
+  #app-main.mobile-split-active {
+    display: flex !important;
+    flex-direction: column !important;
+    height: calc(100dvh - 60px) !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - 60px) !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 60px auto 0 auto !important;
+    gap: 0 !important;
   }
 
-  #app-main {
-    padding: 5.75rem 1.5rem 7rem;
+  #app-main.mobile-split-active #mobile-list-panel {
+    flex: 45 1 0% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    position: relative !important;
+    padding: 0.75rem 1rem 4.25rem 1rem !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
   }
 
-  .fab-button {
-    bottom: 2.25rem;
-    right: 2.25rem;
+  #app-main.mobile-split-active #mobile-calendar-panel {
+    flex: 55 1 0% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0.45rem 0.85rem !important;
+    border-top: 1px solid var(--border-color) !important;
+    background-color: var(--bg-main) !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+  }
+
+  /* El botón FAB (+) vive dentro de #mobile-list-panel con position: absolute */
+  #app-main.mobile-split-active #mobile-list-panel .fab-button,
+  #app-main.mobile-split-active .fab-button {
+    position: absolute !important;
+    bottom: 1rem !important;
+    right: 1rem !important;
+    width: 2.85rem !important;
+    height: 2.85rem !important;
+    font-size: 1.55rem !important;
+    z-index: 20 !important;
+  }
+}
+
+/* Si el celular se gira a horizontal (landscape) con Vista Dividida activa */
+@media (max-width: 1023px) and (orientation: landscape) {
+  #app-main.split-view-active {
+    max-width: 100%;
+    padding: 4.5rem 1.25rem 1.5rem;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1.25rem !important;
+    align-items: start !important;
   }
 }
 
 /* --------------------------------------------------------------------------
-   4. Layout en Escritorio (>= 1024px): Vista Simple (por defecto) y Vista Dividida
+   5. Layout en Escritorio (>= 1024px): Vista Simple y Vista Dividida
    -------------------------------------------------------------------------- */
 @media (min-width: 1024px) {
-  /* Mostrar botón "Dividir vista" en escritorio */
   .header-split-btn {
-    display: inline-flex;
+    width: auto;
+    height: auto;
+    padding: 0.45rem 0.85rem;
+  }
+
+  .header-split-btn .split-btn-label {
+    display: inline;
   }
 
   .header-inner {
@@ -262,7 +306,6 @@
     padding: 0 2rem;
   }
 
-  /* Vista Simple (por defecto en escritorio): ancho amplio y cómodo de 960px */
   #app-main {
     max-width: 960px;
     padding: 6rem 2rem 6.5rem;
@@ -271,18 +314,18 @@
     gap: 1.5rem;
   }
 
-  /* Vista Dividida activa (isSplitViewActive === true): Grid de 2 columnas iguales */
   #app-main.split-view-active {
     max-width: 1180px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    align-items: stretch;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 2rem !important;
+    align-items: start !important;
   }
 
-  /* Cuando la vista dividida está activa, ambos paneles se muestran simultáneamente */
-  #app-main.split-view-active .view-pane,
-  #app-main.split-view-active .view-pane.pane-hidden {
-    display: flex;
+  #app-main.split-view-active #mobile-list-panel,
+  #app-main.split-view-active #mobile-calendar-panel {
+    padding: 0 !important;
+    border: none !important;
+    overflow: visible !important;
   }
 }

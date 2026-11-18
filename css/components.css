@@ -566,6 +566,80 @@
 }
 
 /* --------------------------------------------------------------------------
+   6. Ajustes de Lista y Scrollbar Personalizado en Vista Dividida Móvil
+   -------------------------------------------------------------------------- */
+/* Ocultar cabecera de la lista ("Hábitos de hoy" y contador) en modo dividido móvil */
+#app-main.mobile-split-active .daily-view-header {
+  display: none;
+}
+
+/* Barra de scroll delgada y personalizada con los colores del tema */
+#app-main.mobile-split-active #mobile-list-panel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-accent) var(--bg-surface);
+}
+
+#app-main.mobile-split-active #mobile-list-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+#app-main.mobile-split-active #mobile-list-panel::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+  border-radius: var(--radius-full);
+}
+
+#app-main.mobile-split-active #mobile-list-panel::-webkit-scrollbar-thumb {
+  background-color: var(--color-accent);
+  border-radius: var(--radius-full);
+}
+
+/* Tarjetas de hábitos más compactas en modo dividido móvil para mostrar más ítems */
+#app-main.mobile-split-active .task-list {
+  gap: 0.45rem;
+}
+
+#app-main.mobile-split-active .task-item {
+  padding: 0.6rem 0.85rem;
+  gap: 0.65rem;
+}
+
+#app-main.mobile-split-active .task-title {
+  font-size: 0.9rem;
+}
+
+#app-main.mobile-split-active .task-meta {
+  font-size: 0.68rem;
+}
+
+#app-main.mobile-split-active .status-circle {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+#app-main.mobile-split-active .status-circle svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+#app-main.mobile-split-active .empty-state {
+  padding: 1.15rem 1rem;
+  gap: 0.25rem;
+}
+
+#app-main.mobile-split-active .empty-state-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0;
+}
+
+#app-main.mobile-split-active .empty-state-title {
+  font-size: 0.92rem;
+}
+
+#app-main.mobile-split-active .empty-state-text {
+  font-size: 0.8rem;
+}
+
+/* --------------------------------------------------------------------------
    5. Animación de Recompensa ("DÍA COMPLETADO")
    -------------------------------------------------------------------------- */
 .celebration-banner {

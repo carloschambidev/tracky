@@ -1,13 +1,6 @@
 /**
  * js/ui/calendarView.js
  * Vista de Calendario Mensual utilizando `vanilla-calendar-pro`.
- *
- * Características:
- * - Cabecera personalizada con el nombre del mes en grande a la izquierda y el año a la derecha.
- * - Leyenda flotante compacta ubicada justo debajo de la cabecera del mes y arriba del calendario.
- * - Sincronización en Vista Dividida: si `isSplitViewEnabled()` es `true`, al hacer clic en un día
- *   actualiza únicamente el panel izquierdo con `renderTaskList(clickedDateStr)` sin salir de la
- *   vista dividida. En móvil o Vista Simple, cambia a la vista diaria (`switchView('daily')`).
  */
 
 import VanillaCalendar from 'vanilla-calendar-pro';
@@ -15,19 +8,16 @@ import { getAllTasks, getAllDailyLogs } from '../db/db.js';
 import { getTodayString } from '../logic/dateUtils.js';
 import { shouldTaskAppearOnDate } from '../logic/recurrence.js';
 import { calculateDayStatus } from '../logic/dayStatus.js';
-import { setViewDate, switchView, isSplitViewEnabled } from '../main.js';
+import { setViewDate, getViewDate, switchView, isSplitViewEnabled } from '../main.js';
 import { renderTaskList } from './taskList.js';
 
-// Nombres completos de los meses en español para la cabecera personalizada
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-// Recordamos el último mes visualizado para mantenerlo al refrescar en Escritorio
 let activeCalendarMonth = new Date().getMonth();
 
-// Íconos de estado para las celdas del calendario y la leyenda
 const STATUS_ICONS = {
   completed: `
     <span class="calendar-day-status status-completed" title="Completado" aria-label="Completado">
@@ -54,15 +44,6 @@ const STATUS_ICONS = {
   `
 };
 
-/**
- * Calcula en memoria el estado ('completed', 'partial', 'uncompleted', 'empty')
- * de una fecha específica ('YYYY-MM-DD') usando las tareas y logs precargados.
- *
- * @param {string} dateStr - Fecha en formato 'YYYY-MM-DD'.
- * @param {Array<Object>} allTasks - Lista completa de tareas en memoria.
- * @param {Map<string, Object<string, boolean>>} logsMap - Mapa fecha -> tasksStatus en memoria.
- * @returns {'empty' | 'completed' | 'partial' | 'uncompleted'}
- */
 function getDayStatusInMemory(dateStr, allTasks, logsMap) {
   const activeTasks = allTasks.filter((task) =>
     shouldTaskAppearOnDate(task, dateStr)
@@ -77,19 +58,19 @@ function getDayStatusInMemory(dateStr, allTasks, logsMap) {
 }
 
 /**
- * Inyecta la estructura personalizada (número arriba + ícono de estado debajo)
- * dentro de un botón de día de VanillaCalendar.
- *
- * @param {HTMLElement} dayBtnEl - Botón `.vanilla-calendar-day__btn` de la celda.
- * @param {number|string} dayNumber - Número del día del mes.
- * @param {'empty' | 'completed' | 'partial' | 'uncompleted'} status - Estado calculado del día.
+ * Inyecta el contenido de la celda y aplica la clase `.tracky-day-selected`
+ * si la fecha coincide con el día actualmente seleccionado (`getViewDate()`).
  */
-function renderDayCellContent(dayBtnEl, dayNumber, status) {
+function renderDayCellContent(dayBtnEl, dayNumber, status, dateStr) {
   if (!dayBtnEl) return;
 
   const iconHTML = STATUS_ICONS[status] || STATUS_ICONS.empty;
   dayBtnEl.classList.add('tracky-calendar-day-btn');
   dayBtnEl.dataset.dayStatus = status;
+
+  // Aplicamos overlay visual de selección si este día es el que se está visualizando
+  const selectedDateStr = getViewDate();
+  dayBtnEl.classList.toggle('tracky-day-selected', dateStr === selectedDateStr);
 
   dayBtnEl.innerHTML = `
     <span class="calendar-day-number">${dayNumber}</span>
@@ -98,91 +79,76 @@ function renderDayCellContent(dayBtnEl, dayNumber, status) {
 }
 
 /**
- * Actualiza el título personalizado del mes cuando el usuario navega con las flechas o swipe.
+ * Actualiza visualmente el overlay de selección (`.tracky-day-selected`) en todas las celdas
+ * del calendario sin necesidad de reconstruir toda la instancia.
  *
- * @param {number} monthIndex - Índice del mes (0 = Enero ... 11 = Diciembre).
+ * @param {HTMLElement} calendarContainer
+ * @param {string} selectedDateStr - Fecha seleccionada ('YYYY-MM-DD').
  */
-function updateCustomMonthTitle(monthIndex) {
-  const monthTitleEl = document.getElementById('calendar-custom-month-title');
+function highlightSelectedDayInDOM(calendarContainer, selectedDateStr) {
+  if (!calendarContainer) return;
+  const allDayBtns = calendarContainer.querySelectorAll('[data-calendar-day]');
+  allDayBtns.forEach((btn) => {
+    const isSelected = btn.dataset.calendarDay === selectedDateStr;
+    btn.classList.toggle('tracky-day-selected', isSelected);
+    btn.classList.toggle('vanilla-calendar-day__btn_selected', isSelected);
+  });
+}
+
+function updateCustomMonthTitle(monthIndex, rootContainer = document) {
+  const monthTitleEl =
+    rootContainer.querySelector('#calendar-custom-month-title') ||
+    document.getElementById('calendar-custom-month-title');
+
   if (monthTitleEl && MONTH_NAMES[monthIndex]) {
     monthTitleEl.textContent = MONTH_NAMES[monthIndex];
   }
 }
 
 /**
- * Habilita el gesto de deslizar horizontalmente (swipe táctil)
- * sobre el contenedor del calendario para cambiar al mes anterior o siguiente
- * dentro del año actual.
+ * Cambia el mes activo del calendario (+1 siguiente mes, -1 mes anterior)
+ * restringido al año actual (0 = Enero ... 11 = Diciembre) y re-renderiza el calendario.
  *
- * @param {HTMLElement} calendarWrapper
+ * @param {number} delta - +1 para mes siguiente, -1 para mes anterior.
  */
-function enableCalendarSwipe(calendarWrapper) {
-  let startX = 0;
-  let startY = 0;
-  const SWIPE_THRESHOLD = 45;
+export async function changeCalendarMonth(delta) {
+  const targetMonth = activeCalendarMonth + delta;
+  if (targetMonth < 0 || targetMonth > 11) {
+    return;
+  }
 
-  calendarWrapper.addEventListener(
-    'touchstart',
-    (event) => {
-      if (!event.changedTouches || event.changedTouches.length === 0) return;
-      startX = event.changedTouches[0].clientX;
-      startY = event.changedTouches[0].clientY;
-    },
-    { passive: true }
-  );
+  activeCalendarMonth = targetMonth;
+  const targetContainer =
+    document.getElementById('mobile-calendar-panel') ||
+    document.getElementById('app-main');
 
-  calendarWrapper.addEventListener(
-    'touchend',
-    (event) => {
-      if (!event.changedTouches || event.changedTouches.length === 0) return;
-      const deltaX = event.changedTouches[0].clientX - startX;
-      const deltaY = event.changedTouches[0].clientY - startY;
-
-      // Si el gesto comenzó en el borde izquierdo (< 50px) deslizando hacia la derecha,
-      // corresponde al gesto global de abrir el Side Drawer, por lo que no cambiamos de mes.
-      if (startX < 50 && deltaX > 0) {
-        return;
-      }
-
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) >= SWIPE_THRESHOLD) {
-        if (deltaX < 0) {
-          const nextBtn = calendarWrapper.querySelector('.vanilla-calendar-arrow_next');
-          if (nextBtn && !nextBtn.disabled && nextBtn.style.visibility !== 'hidden') {
-            nextBtn.click();
-          }
-        } else {
-          const prevBtn = calendarWrapper.querySelector('.vanilla-calendar-arrow_prev');
-          if (prevBtn && !prevBtn.disabled && prevBtn.style.visibility !== 'hidden') {
-            prevBtn.click();
-          }
-        }
-      }
-    },
-    { passive: true }
-  );
+  await renderCalendarView({
+    preserveHeaderDate: true,
+    targetContainer
+  });
 }
 
 /**
- * Renderiza la Vista de Calendario Mensual dentro de `#calendar-view-container` (o `#app-main`).
+ * Renderiza la Vista de Calendario Mensual en el contenedor indicado (`#mobile-calendar-panel` o `#app-main`).
  *
  * @param {Object} [options]
- * @param {boolean} [options.preserveHeaderDate=false] - En Vista Dividida conserva la fecha seleccionada en el Header.
+ * @param {boolean} [options.preserveHeaderDate=false]
+ * @param {HTMLElement|null} [options.targetContainer=null]
  */
-export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
+export async function renderCalendarView({ preserveHeaderDate = false, targetContainer = null } = {}) {
   const calendarContainer =
-    document.getElementById('calendar-view-container') ||
+    targetContainer ||
+    document.getElementById('mobile-calendar-panel') ||
     document.getElementById('app-main');
 
   if (!calendarContainer) return;
 
   try {
-    // 1. Obtenemos todas las tareas y todos los logs diarios de IndexedDB en 1 sola operación paralela
     const [allTasks, allDailyLogs] = await Promise.all([
       getAllTasks(),
       getAllDailyLogs()
     ]);
 
-    // Construimos un Map en memoria para acceso O(1) por fecha 'YYYY-MM-DD'
     const logsMap = new Map();
     for (const log of allDailyLogs) {
       if (log && log.date) {
@@ -198,8 +164,6 @@ export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
 
     const initialMonthName = MONTH_NAMES[activeCalendarMonth] || MONTH_NAMES[new Date().getMonth()];
 
-    // 2. Renderizamos la cabecera personalizada (Mes a la izquierda, Año a la derecha),
-    //    seguida de la leyenda compacta flotante y la tarjeta del calendario.
     calendarContainer.innerHTML = `
       <section class="calendar-view-section">
         <div class="calendar-custom-header">
@@ -222,13 +186,14 @@ export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
           </div>
         </div>
 
-        <div class="calendar-card" id="calendar-swipe-area">
+        <div class="calendar-card">
           <div id="tracky-calendar"></div>
         </div>
       </section>
     `;
 
-    // 3. Configuramos VanillaCalendar ocultando su título de mes/año por defecto en DOMTemplates
+    const calendarEl = calendarContainer.querySelector('#tracky-calendar');
+
     const calendarOptions = {
       type: 'default',
       date: {
@@ -245,11 +210,12 @@ export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
         },
         selected: {
           month: activeCalendarMonth,
-          year: currentYear
+          year: currentYear,
+          dates: [getViewDate()]
         },
         selection: {
           day: 'single',
-          month: false,
+          month: true,
           year: false
         },
         visibility: {
@@ -263,6 +229,10 @@ export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
         default: `
           <div class="vanilla-calendar-header">
             <#ArrowPrev />
+            <div class="vanilla-calendar-header__content">
+              <#Month />
+              <#Year />
+            </div>
             <#ArrowNext />
           </div>
           <div class="vanilla-calendar-wrapper">
@@ -274,18 +244,11 @@ export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
         `
       },
       actions: {
-        /**
-         * Al hacer clic en las flechas (< o >) o hacer swipe, actualizamos el nombre del mes
-         * en nuestro encabezado personalizado.
-         */
         clickArrow(event, self) {
           activeCalendarMonth = self.selectedMonth;
-          updateCustomMonthTitle(self.selectedMonth);
+          updateCustomMonthTitle(self.selectedMonth, calendarContainer);
         },
 
-        /**
-         * Se ejecuta por cada celda de día al construir o cambiar de mes.
-         */
         getDays(day, date, HTMLElement, HTMLButtonElement) {
           if (
             HTMLButtonElement.classList.contains('vanilla-calendar-day__btn_prev') ||
@@ -295,15 +258,9 @@ export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
           }
 
           const status = getDayStatusInMemory(date, allTasks, logsMap);
-          renderDayCellContent(HTMLButtonElement, day, status);
+          renderDayCellContent(HTMLButtonElement, day, status, date);
         },
 
-        /**
-         * Al hacer clic en cualquier día del calendario:
-         * - Si está en Vista Dividida en Escritorio (`isSplitViewEnabled()`), actualiza
-         *   únicamente el panel izquierdo con `renderTaskList(clickedDateStr)`.
-         * - En Móvil o en Vista Simple, cambia a la vista diaria (`switchView('daily')`).
-         */
         clickDay(event, self) {
           const dayBtn = event.target.closest('[data-calendar-day]');
           const clickedDateStr =
@@ -313,9 +270,11 @@ export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
           if (!clickedDateStr) return;
 
           setViewDate(clickedDateStr);
+          highlightSelectedDayInDOM(calendarContainer, clickedDateStr);
 
           if (isSplitViewEnabled()) {
-            renderTaskList(clickedDateStr);
+            const listPanel = document.getElementById('mobile-list-panel');
+            renderTaskList(clickedDateStr, listPanel);
           } else {
             switchView('daily');
           }
@@ -323,15 +282,10 @@ export async function renderCalendarView({ preserveHeaderDate = false } = {}) {
       }
     };
 
-    const calendar = new VanillaCalendar('#tracky-calendar', calendarOptions);
+    const calendar = new VanillaCalendar(calendarEl || '#tracky-calendar', calendarOptions);
     calendar.init();
-    updateCustomMonthTitle(calendar.selectedMonth);
-
-    // 4. Activamos soporte de gesto táctil (swipe) para cambiar de mes deslizando en móvil
-    const swipeArea = document.getElementById('calendar-swipe-area');
-    if (swipeArea) {
-      enableCalendarSwipe(swipeArea);
-    }
+    updateCustomMonthTitle(activeCalendarMonth, calendarContainer);
+    highlightSelectedDayInDOM(calendarContainer, getViewDate());
   } catch (error) {
     console.error('[Tracky Calendar] Error al renderizar el calendario mensual:', error);
   }
